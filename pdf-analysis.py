@@ -1,15 +1,11 @@
-# Use a pipeline as a high-level helper
 from transformers import pipeline
 from huggingface_hub import login
 import fitz  # PyMuPDF
 import pandas as pd
+import os
+from transformers import pipeline
 
 login(token="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")
-
-import os
-import fitz  # PyMuPDF
-import pandas as pd
-from transformers import pipeline
 
 # Ensure the necessary directory exists
 def ensure_directory_exists(directory):
@@ -28,8 +24,8 @@ def extract_text_from_pdf(pdf_path):
 def generate_text_with_mistral(text):
     question = "Who is involved? You only need to answer this question with the entity involved and nothing else."
     prompt = f"{text}\n\n{question}"
-    pipe = pipeline("text-generation", device=0, model="mistralai/Mistral-7B-Instruct-v0.3")
-    generated_text = pipe(prompt, max_length=3000, num_return_sequences=1)
+    pipe = pipeline("text-generation", device=0, model="mistralai/Mistral-7B-Instruct-v0.3", use_auth_token=True)
+    generated_text = pipe(prompt, max_length=3000, num_return_sequences=1, batch_size=1)  # Reduced batch size
     return generated_text[0]['generated_text']
 
 # Main function to process all PDF files
@@ -60,7 +56,6 @@ def main():
     ensure_directory_exists(output_folder)
     output_path = os.path.join(output_folder, 'POFMA_Entity_Extraction.csv')
     df.to_csv(output_path, index=False)
-    print(f"Entity extraction completed and saved to {output_path}.")
 
 if __name__ == "__main__":
     main()

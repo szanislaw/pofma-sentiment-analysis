@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup
 import time
 import csv
 
-# Configure Chrome options
+# Chrome config
 chrome_options = Options()
-# chrome_options.add_argument("--headless")  # Ensure GUI is off
+# chrome_options.add_argument("--headless")  
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
@@ -18,10 +18,8 @@ chrome_prefs = {
 }
 chrome_options.add_experimental_option("prefs", chrome_prefs)
 
-# Set path to chromedriver as per your configuration
-webdriver_service = Service("chromedriver-linux64/chromedriver")  # Change this to your actual path
+webdriver_service = Service("chromedriver-linux64/chromedriver")  # Path to the chromedriver executable
 
-# Choose Chrome Browser
 driver = webdriver.Chrome(service=webdriver_service, options=chrome_options)
 
 def facebook_login(driver, email, password):

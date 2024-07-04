@@ -35,23 +35,23 @@ for index, row in urls_df.iterrows():
     driver.get(reddit_post_url)
 
     # Wait for the page to load
-    time.sleep(5)
+    time.sleep(3) # Increase this if the page takes longer to load
 
-    # Scroll to the bottom to load all comments (you may need to adjust the scrolling logic)
+    # scroll
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(3)
+        time.sleep(2)
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
         last_height = new_height
 
-    # Get the page source and parse it with BeautifulSoup
+    # parse
     page_source = driver.page_source
     soup = BeautifulSoup(page_source, 'html.parser')
 
-    # Extract comments
+    # extract to var comments
     comments = []
     comment_elements = soup.find_all("div", {"id": "-post-rtjson-content"})
 
