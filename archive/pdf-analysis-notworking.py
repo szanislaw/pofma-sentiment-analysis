@@ -23,7 +23,7 @@ def extract_text_from_pdf(pdf_path):
 def generate_text_with_mistral(text):
     question = "Who is involved?"
     prompt = f"{text}\n\n{question}"
-    pipe = pipeline("text-generation", device=0, model="Falconsai/text_summarization")
+    pipe = pipeline("text-generation", device=0, model="Falconsai/text_summarization", tokenizer="Falconsai/text_summarization")
     generated_text = pipe(prompt, max_length=3000, num_return_sequences=1, batch_size=32)  # Reduced batch size
     return generated_text[0]['generated_text']
 
