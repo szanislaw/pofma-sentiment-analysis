@@ -10,7 +10,7 @@ csv_file_path = 'data/pofma-related-articles-reddit.csv'
 urls_df = pd.read_csv(csv_file_path)
 
 # Update the destination path
-output_dir = 'scraped-comments/reddit'
+output_dir = 'scraped-comments'
 os.makedirs(output_dir, exist_ok=True)
 
 # Initialize a counter for numbering the files
@@ -40,7 +40,7 @@ for index, row in urls_df.iterrows():
                 comments.append([comment['data']['body']])
 
         # Format the output filename with a numbered prefix and the sanitized title
-        file_name = f"{counter} - {sanitized_title}.csv"
+        file_name = f"reddit-{counter} - {sanitized_title}.csv"
         output_file_path = os.path.join(output_dir, file_name)
         
         # Save the comments to the CSV file

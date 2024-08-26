@@ -6,10 +6,10 @@ from transformers import pipeline
 sentiment_analyzer = pipeline('sentiment-analysis', model='finiteautomata/bertweet-base-sentiment-analysis')
 
 # Path to the folder containing the original CSV files
-input_folder_path = 'scraped-comments/reddit'
+input_folder_path = 'scraped-comments'
 
 # Path to the folder where sentiment-analyzed files will be saved
-output_folder_path = 'scraped-comments-sentiment/reddit'
+output_folder_path = 'scraped-comments-sentiment'
 
 # Create the output directory if it doesn't exist
 os.makedirs(output_folder_path, exist_ok=True)
