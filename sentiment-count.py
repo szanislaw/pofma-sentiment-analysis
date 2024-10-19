@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # Define the path to the folder containing the CSV files
 folder_path = 'scraped-comments-sentiment'
@@ -26,4 +27,3 @@ print("Cumulative Sentiment Counts:")
 print(f"NEG: {total_sentiment_counts['NEG']}")
 print(f"NEU: {total_sentiment_counts['NEU']}")
 print(f"POS: {total_sentiment_counts['POS']}")
- 

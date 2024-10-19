@@ -5,30 +5,27 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from PyPDF2 import PdfReader
 import numpy as np
 
-# Function to parse PDF content
 def parse_pdf(file_path):
     reader = PdfReader(file_path)
     content = ''
     for page in reader.pages:
-        content += page.extract_text()  # Extract text from each page
+        content += page.extract_text() 
     return content
 
-# Function to prepare DataFrame for predictions
 def prepare_dataframe_from_pdf(pdf_paths):
     data = []
     for pdf in pdf_paths:
         content = parse_pdf(pdf)
-        data.append(content)  # Add content to the DataFrame
+        data.append(content) 
     return pd.DataFrame(data, columns=['Falsehood Context'])
 
-# Function to get all PDF files in a directory
 def get_all_pdfs_in_directory(directory):
     pdf_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.pdf')]
     return pdf_paths
 
-# Load the saved tokenizer and model
-tokenizer = BertTokenizer.from_pretrained('pofma_tokenizer')  # Use your saved tokenizer directory
-model = BertForSequenceClassification.from_pretrained('pofma_model')  # Use your saved model directory
+# Load the tokenizer and model 
+tokenizer = BertTokenizer.from_pretrained('tokenizer/bert/best_pofma_model_acc_0.847_f1_0.781_threshold_0.5')  
+model = BertForSequenceClassification.from_pretrained('models/bert/best_pofma_model_acc_0.847_f1_0.781_threshold_0.5')
 
 # Set up device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,7 +36,7 @@ actor_columns = ['Actor: Media', 'Actor: Political Group or Figure', 'Actor: Civ
                  'Actor: Social Media Platform', 'Actor: Internet Access Provider', 'Actor: Private Individual']
 
 # Directory containing the PDF files
-pdf_directory = 'POFMA Media Notices'  # Change this to your actual PDF directory
+pdf_directory = 'data/pofma-media-notices'  # Change this to your actual PDF directory
 
 # Get all PDFs in the directory
 pdf_paths = get_all_pdfs_in_directory(pdf_directory)
@@ -109,4 +106,4 @@ df = df.reset_index(drop=True)  # Ensure the indices match before concatenation
 df[actor_columns] = predictions_df  # Add predictions to respective columns
 
 # Save the results to an Excel file
-df.to_excel("pdf_predictions.xlsx", index=False)
+df.to_excel("inference/pofma_predictions.xlsx", index=False)

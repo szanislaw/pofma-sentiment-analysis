@@ -3,7 +3,7 @@ import pandas as pd
 from transformers import pipeline
 
 # Initialize the sentiment analysis pipeline with the specified model
-sentiment_analyzer = pipeline('sentiment-analysis', model='finiteautomata/bertweet-base-sentiment-analysis')
+sentiment_analyzer = pipeline('sentiment-analysis', model='finiteautomata/bertweet-base-sentiment-analysis', device=0)
 
 # Path to the folder containing the original CSV files
 input_folder_path = 'scraped-comments'
