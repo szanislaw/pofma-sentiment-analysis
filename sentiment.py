@@ -4,8 +4,8 @@ from transformers import pipeline
 
 sentiment_analyzer = pipeline('sentiment-analysis', model='finiteautomata/bertweet-base-sentiment-analysis', device=0)
 
-input_folder_path = 'scraped-comments'
-output_folder_path = 'scraped-comments-sentiment'
+input_folder_path = 'data/scraped-comments'
+output_folder_path = 'data/scraped-comments-sentiment'
 os.makedirs(output_folder_path, exist_ok=True)
 
 def split_text_into_chunks(text, max_length=128):
@@ -36,4 +36,24 @@ for csv_file in csv_files:
     else:
         print(f"Column 'Comment' not found in {csv_file}. Skipping file.")
 
-print("All files processed.")
+print("All files processed.\n")
+
+folder_path = 'data/scraped-comments-sentiment'
+
+total_sentiment_counts = {'NEG': 0, 'NEU': 0, 'POS': 0}
+
+for filename in os.listdir(folder_path):
+    if filename.endswith('.csv'):
+        file_path = os.path.join(folder_path, filename)
+        df = pd.read_csv(file_path)
+        
+        sentiment_counts = df['sentiment'].value_counts()
+        
+        for sentiment, count in sentiment_counts.items():
+            if sentiment in total_sentiment_counts:
+                total_sentiment_counts[sentiment] += count
+
+print("Cumulative Sentiment Counts:")
+print(f"NEG: {total_sentiment_counts['NEG']}")
+print(f"NEU: {total_sentiment_counts['NEU']}")
+print(f"POS: {total_sentiment_counts['POS']}")

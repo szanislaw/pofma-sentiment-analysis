@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-folder_path = 'scraped-comments-sentiment'
+folder_path = 'data/scraped-comments-sentiment'
 
 total_sentiment_counts = {'NEG': 0, 'NEU': 0, 'POS': 0}
 

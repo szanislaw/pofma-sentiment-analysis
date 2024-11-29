@@ -8,7 +8,7 @@ import re
 csv_file_path = 'data/pofma-related-articles-reddit.csv'
 urls_df = pd.read_csv(csv_file_path)
 
-output_dir = 'scraped-comments'
+output_dir = 'data/scraped-comments'
 os.makedirs(output_dir, exist_ok=True)
 
 counter = 1
