@@ -5,40 +5,35 @@ import torch
 from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer, BertForSequenceClassification, AdamW, DistilBertTokenizer, DistilBertForSequenceClassification
 from torch.utils.data import Dataset, DataLoader
+from torch.optim import AdamW
 import numpy as np
 from sklearn.metrics import f1_score
 import matplotlib.pyplot as plt
 
-# 8. Set up device, optimizer, and start training
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 1. Load the Excel file and combine the first two columns
 file_path = 'model/cleaned master dataset.xlsx'
 df = pd.read_excel(file_path)
-
-# Combine first two columns into "Falsehood Context"
 df['Falsehood Context'] = df[df.columns[0]].astype(str) + " " + df[df.columns[1]].astype(str)
-
-# Define actor columns and drop all other columns except actor columns and "Falsehood Context"
-actor_columns = ['Actor: Media', 'Actor: Political Group or Figure', 'Actor: Civil Society Group or Figure', 'Actor: Social Media Platform', 'Actor: Internet Access Provider', 'Actor: Private Individual']
+actor_columns = ['Actor: Media', 
+                 'Actor: Political Group or Figure', 
+                 'Actor: Civil Society Group or Figure',    
+                 'Actor: Social Media Platform', 
+                 'Actor: Internet Access Provider', 
+                 'Actor: Private Individual'
+                 ]
 df = df[['Falsehood Context'] + actor_columns]
-
-# Convert NaN values in actor columns to 0
 df[actor_columns] = df[actor_columns].fillna(0)
-
-# Filter out rows with no actors for training (sum of actor columns == 0)
 df_actors_present = df[df[actor_columns].sum(axis=1) > 0].reset_index(drop=True)
 df_no_actors = df[df[actor_columns].sum(axis=1) == 0].reset_index(drop=True)
 
-# Prepare the labels as arrays (multi-label classification)
+# multi-label classification
 df_actors_present['Label'] = df_actors_present[actor_columns].values.tolist()
 
-# 2. Split the data into train and validation sets
+# split dataset into training and validation sets
 train_texts, val_texts, train_labels, val_labels = train_test_split(
     df_actors_present['Falsehood Context'], df_actors_present['Label'], test_size=0.2, random_state=42
 )
-
-# 3. Dataset Class Definition
 class POFMADataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_len=512):
         self.texts = texts
@@ -65,33 +60,25 @@ class POFMADataset(Dataset):
             'labels': labels
         }
         
-# 4. Tokenizer and model initialization
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=6)
 
-# 5. Prepare Datasets and DataLoader
 train_dataset = POFMADataset(train_texts.values, train_labels.values, tokenizer)
 val_dataset = POFMADataset(val_texts.values, val_labels.values, tokenizer)
 
-# batch_size optimised
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
+# adjust batch size as needed
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
 
-# 6. Define the training function with Gradient Clipping
-# Calculate class weights
 class_weights = {}
 for actor in actor_columns:
     class_count = df_actors_present[actor].value_counts(normalize=True)
     weight = class_count[0] / class_count[1] if 1 in class_count else 1.0
     class_weights[actor] = weight
 
-# Convert class weights to a tensor
 class_weights_tensor = torch.tensor(list(class_weights.values())).to(device)
-
-# Use BCEWithLogitsLoss with the computed weights
 loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=class_weights_tensor)
 
-# Update the train_epoch function to use the weighted loss
 def train_epoch(model, dataloader, optimizer, device, max_grad_norm=1.0):
     model.train()
     total_loss = 0
@@ -104,19 +91,16 @@ def train_epoch(model, dataloader, optimizer, device, max_grad_norm=1.0):
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
         
-        # Use the weighted loss function
+        # use weighted loss function
         loss = loss_fn(logits, labels)
         total_loss += loss.item()
         loss.backward()
-
-        # Gradient clipping
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-
+        
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)   #gradient clipping
         optimizer.step()
 
     return total_loss / len(dataloader)
 
-# 7. Define the evaluation function with accuracy calculation
 def eval_model(model, dataloader, device, threshold):
     model = model.eval()
     total_loss = 0
@@ -131,56 +115,45 @@ def eval_model(model, dataloader, device, threshold):
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
             loss = outputs.loss
             total_loss += loss.item()
-
-            # Get logits and convert to probabilities using sigmoid
             logits = outputs.logits
             probs = torch.sigmoid(logits)
-
-            # Convert probabilities to binary predictions using the threshold
             preds = (probs > threshold).float()
 
-            # Count correct predictions
-            correct_predictions += (preds == labels).sum().item()  # Count correct labels
-            total_predictions += torch.numel(labels)  # Total number of labels
+            correct_predictions += (preds == labels).sum().item()  # cnt corrlabels
+            total_predictions += torch.numel(labels)  # ttl nlabels
             
             f1 = f1_score(labels.cpu().numpy(), preds.cpu().numpy(), average='weighted', zero_division=0)
 
     accuracy = correct_predictions / total_predictions
     return total_loss / len(dataloader), accuracy, f1, threshold
 
-
 model = model.to(device)
-# Optimizer Settings
+
+# optimizer Settings
+optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.05)  # Experiment with 3e-5 as well
 # optimizer = Adafactor(model.parameters(), lr=1e-4, scale_parameter=False, relative_step=False)
 # optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=0.005)
-optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)  # Experiment with 3e-5 as well
 
-# 9. Training Loop with Early Stopping and Gradient Clipping
 best_f1 = 0
 best_val_accuracy = 0
-patience = 20
+patience = 10
 patience_counter = 0
 threshold = 0.5
-
-epochs = 50
+epochs = 30
 f1_scores = []
 val_accuracies = []
 
 for epoch in range(epochs):
     print(f'Epoch {epoch+1}/{epochs}')
     
-    # Gradient CLipping
-    train_loss = train_epoch(model, train_loader, optimizer, device, max_grad_norm=0.5)
+    train_loss = train_epoch(model, train_loader, optimizer, device, max_grad_norm=0.3)
     val_loss, val_accuracy, f1, threshold = eval_model(model, val_loader, device, threshold)
     f1_scores.append(f1)
     val_accuracies.append(val_accuracy)
     
-    print(f'Train Loss: {train_loss:.3f}')
-    print(f'Val Loss: {val_loss:.3f}')
-    print(f'Val Accuracy: {val_accuracy:.3f}')
-    print(f'F1 Score: {f1:.3f}')
+    print(f'Train Loss: {train_loss:.3f}, Validation Loss: {val_loss:.3f}, Validation Accuracy: {val_accuracy:.3f}, F1 Score: {f1:.3f}')
     
-    # Early Stopping
+    # early Stopping
     if f1 > best_f1:
         best_f1 = f1
         best_val_accuracy = val_accuracy 
@@ -202,42 +175,38 @@ completed_epochs = len(f1_scores)
 plt.figure(figsize=(8, 6))
 plt.plot(range(1, completed_epochs + 1), f1_scores, marker='o', linestyle='-', color='b', label='F1 Score')
 plt.plot(range(1, completed_epochs + 1), val_accuracies, marker='s', linestyle='-', color='r', label='Validation Accuracy')
-
-# Add titles and labels
 plt.title(f'Epoch vs F1 Score & Validation Accuracy, Threshold: {threshold}')
 plt.xlabel('Epoch')
 plt.ylabel('Score')
 plt.grid(True)
-
-# Add a legend to differentiate between F1 and validation accuracy
 plt.legend()
 
-# Save the plot to a file (if desired, including date and time)
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 output_dir = 'model-graph'
 os.makedirs(output_dir, exist_ok=True)
 file_name = f'epoch_vs_f1_and_val_acc_model_acc_{best_val_accuracy:.3f}_f1_{best_f1:.3f}_threshold_{threshold}.png'
 file_path = os.path.join(output_dir, file_name)
 plt.savefig(file_path, format='png')
-
-# Display the plot
 plt.show()
 
-# Optional: Predict on rows without actors (eyeballing set)
+#EYEBALL PREDICTIONS
 eyeball_texts = df_no_actors['Falsehood Context'].values
 eyeball_labels = df_no_actors[actor_columns].values.tolist()
 
 eyeball_dataset = POFMADataset(eyeball_texts, eyeball_labels, tokenizer)
 eyeball_loader = DataLoader(eyeball_dataset, batch_size=16, shuffle=False)
 
-# Define a threshold for similarity
-similarity_threshold = 0.2  # Adjust this threshold based on your needs
+similarity_threshold = 0.3  # Adjust threshold for best score predictions
 
-# Define actor columns
-actor_columns = ['Actor: Media', 'Actor: Political Group or Figure', 'Actor: Civil Society Group or Figure',
-                 'Actor: Social Media Platform', 'Actor: Internet Access Provider', 'Actor: Private Individual']
+# actor_columns = ['Actor: Media', 
+#                  'Actor: Political Group or Figure', 
+#                  'Actor: Civil Society Group or Figure',
+#                  'Actor: Social Media Platform', 
+#                  'Actor: Internet Access Provider', 
+#                  'Actor: Private Individual'
+#                  ]
 
-# Perform predictions
+# predictions
 model.eval()
 predictions = []
 with torch.no_grad():

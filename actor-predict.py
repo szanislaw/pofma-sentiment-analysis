@@ -23,28 +23,23 @@ def get_all_pdfs_in_directory(directory):
     pdf_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.pdf')]
     return pdf_paths
 
-# Load the tokenizer and model 
-tokenizer = BertTokenizer.from_pretrained('tokenizer/bert/best_pofma_model_acc_0.847_f1_0.781_threshold_0.5')  
-model = BertForSequenceClassification.from_pretrained('models/bert/best_pofma_model_acc_0.847_f1_0.781_threshold_0.5')
-
-# Set up device
+tokenizer = BertTokenizer.from_pretrained('tokenizer/bert/best_pofma_model_acc_0.785_f1_0.659_threshold_0.5')  
+model = BertForSequenceClassification.from_pretrained('models/bert/best_pofma_model_acc_0.785_f1_0.659_threshold_0.5')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
-# List of actor columns (B-G)
-actor_columns = ['Actor: Media', 'Actor: Political Group or Figure', 'Actor: Civil Society Group or Figure',
-                 'Actor: Social Media Platform', 'Actor: Internet Access Provider', 'Actor: Private Individual']
+actor_columns = ['Actor: Media', 
+                 'Actor: Political Group or Figure', 
+                 'Actor: Civil Society Group or Figure',
+                 'Actor: Social Media Platform', 
+                 'Actor: Internet Access Provider', 
+                 'Actor: Private Individual'
+                 ]
 
-# Directory containing the PDF files
-pdf_directory = 'data/pofma-media-notices'  # Change this to your actual PDF directory
-
-# Get all PDFs in the directory
+pdf_directory = 'data/pofma-media-notices'
 pdf_paths = get_all_pdfs_in_directory(pdf_directory)
 
-# Prepare DataFrame from PDF files
 df = prepare_dataframe_from_pdf(pdf_paths)
-
-# Tokenize the PDF content for the model
 class POFMADataset(torch.utils.data.Dataset):
     def __init__(self, texts, tokenizer, max_len=512):
         self.texts = texts
@@ -68,14 +63,12 @@ class POFMADataset(torch.utils.data.Dataset):
             'attention_mask': encoding['attention_mask'].flatten(),
         }
 
-# Create dataset and dataloader
 pdf_dataset = POFMADataset(df['Falsehood Context'].values, tokenizer)
 pdf_loader = torch.utils.data.DataLoader(pdf_dataset, batch_size=1, shuffle=False)
 
 # Define a threshold for similarity (to handle similar scores)
 similarity_threshold = 0.3
 
-# Perform predictions
 model.eval()
 predictions = []
 with torch.no_grad():
@@ -98,12 +91,9 @@ with torch.no_grad():
             
             predictions.append(binary_labels)
 
-# Convert predictions to a DataFrame
 predictions_df = pd.DataFrame(predictions, columns=actor_columns)
 
-# Add the predictions to the original DataFrame without modifying 'Falsehood Context'
-df = df.reset_index(drop=True)  # Ensure the indices match before concatenation
-df[actor_columns] = predictions_df  # Add predictions to respective columns
 
-# Save the results to an Excel file
+df = df.reset_index(drop=True)  # indices match before concatenation
+df[actor_columns] = predictions_df  # add predictions to respective columns
 df.to_excel("inference/pofma_predictions.xlsx", index=False)

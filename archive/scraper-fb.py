@@ -8,19 +8,16 @@ import json
 import pandas as pd
 import time
 
-# Function to load cookies from a JSON file
 def load_cookies(driver, cookies_file):
     with open(cookies_file, 'r') as f:
         cookies = json.load(f)
     for cookie in cookies:
-        # Ensure the domain is set correctly
         if 'domain' in cookie and cookie['domain'].startswith('.'):
             cookie['domain'] = cookie['domain'][1:]  # Remove leading dot for compatibility
         
-        # Handle the sameSite attribute
         if 'sameSite' in cookie:
             if cookie['sameSite'] not in ['Strict', 'Lax', 'None']:
-                cookie['sameSite'] = 'Lax'  # Set a default value if not in the expected format
+                cookie['sameSite'] = 'Lax'  # Set a default value if unexpected value
         else:
             cookie['sameSite'] = 'Lax'  # Set a default value if sameSite is missing
         
@@ -29,28 +26,26 @@ def load_cookies(driver, cookies_file):
         except Exception as e:
             print(f"Could not add cookie: {cookie['name']} due to {e}")
 
-# Function to click "See more" buttons
+# See More
 def click_see_more_buttons(driver):
     see_more_buttons = driver.find_elements(By.XPATH, '//div[@role="button" and contains(text(), "See more")]')
     for button in see_more_buttons:
         try:
             button.click()
-            time.sleep(1)  # Wait for the content to load after clicking
+            time.sleep(1) 
         except Exception as e:
             print(f"Could not click 'See more' button due to {e}")
 
-# Configure Chrome options
 chrome_options = Options()
-# chrome_options.add_argument("--headless")  # Uncomment this line if you want to run in headless mode
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+# chrome_options.add_argument("--headless")  # Uncomment this line if you want to run in headless mode
 
 chrome_prefs = {
-    "profile.default_content_setting_values.notifications": 2  # 1-Allow, 2-Block
+    "profile.default_content_setting_values.notifications": 2  # 1-Allow
 }
 chrome_options.add_experimental_option("prefs", chrome_prefs)
 
-# Use webdriver_manager to manage ChromeDriver dynamically
 webdriver_service = Service(ChromeDriverManager().install())
 
 driver = webdriver.Chrome(service=webdriver_service, options=chrome_options)
