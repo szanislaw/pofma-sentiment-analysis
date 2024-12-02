@@ -3,7 +3,7 @@ import datetime
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW, DistilBertTokenizer, DistilBertForSequenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification, AdamW
 from torch.utils.data import Dataset, DataLoader
 from torch.optim import AdamW
 import numpy as np
@@ -93,7 +93,8 @@ actor_columns = ['Actor: Media',
                  'Actor: Civil Society Group or Figure', 
                  'Actor: Social Media Platform', 
                  'Actor: Internet Access Provider', 
-                 'Actor: Private Individual']
+                 'Actor: Private Individual'
+                 ]
 
 df = pd.read_excel(file_path)
 df['Falsehood Context'] = df[df.columns[0]].astype(str) + " " + df[df.columns[1]].astype(str)
@@ -131,7 +132,7 @@ model = model.to(device)
 # Optimizer Settings
 # optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
 # optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=0.1) 
-optimizer = AdamW(model.parameters(), lr=5e-5, weight_decay=0.05)
+optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
 # optimizer = Adafactor(model.parameters(), lr=1e-4, scale_parameter=False, relative_step=False)
 # optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=0.005)
 
@@ -140,7 +141,7 @@ best_val_accuracy = 0
 best_val_loss = float('inf')
 patience_cnt = 0    
 
-patience = 10
+patience = 15
 threshold = 0.5
 epochs = 50
 
@@ -171,12 +172,12 @@ for epoch in range(epochs):
     
     if patience_cnt >= patience:
         print("Early stopping triggered.")
-        model_file_name = f"models/bert/best_pofma_model_acc_{best_val_accuracy:.3f}_f1_{best_f1:.3f}_threshold_{threshold}"
-        tokenizer_file_name = f"tokenizer/bert/best_pofma_model_acc_{best_val_accuracy:.3f}_f1_{best_f1:.3f}_threshold_{threshold}"
-        model.save_pretrained(model_file_name)
-        tokenizer.save_pretrained(tokenizer_file_name)
         break
         
+    model_file_name = f"models/bert/best_pofma_model_acc_{best_val_accuracy:.3f}_f1_{best_f1:.3f}_threshold_{threshold}"
+    tokenizer_file_name = f"tokenizer/bert/best_pofma_model_acc_{best_val_accuracy:.3f}_f1_{best_f1:.3f}_threshold_{threshold}"
+    model.save_pretrained(model_file_name)
+    tokenizer.save_pretrained(tokenizer_file_name)
     
 
 completed_epochs = len(f1_scores)

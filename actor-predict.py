@@ -23,8 +23,8 @@ def get_all_pdfs_in_directory(directory):
     pdf_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.pdf')]
     return pdf_paths
 
-tokenizer = BertTokenizer.from_pretrained('tokenizer/bert/best_pofma_model_acc_0.785_f1_0.659_threshold_0.5')  
-model = BertForSequenceClassification.from_pretrained('models/bert/best_pofma_model_acc_0.785_f1_0.659_threshold_0.5')
+tokenizer = BertTokenizer.from_pretrained('tokenizer/bert/best_pofma_model_acc_0.826_f1_0.646_threshold_0.5')  
+model = BertForSequenceClassification.from_pretrained('models/bert/best_pofma_model_acc_0.826_f1_0.646_threshold_0.5')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
@@ -97,3 +97,14 @@ predictions_df = pd.DataFrame(predictions, columns=actor_columns)
 df = df.reset_index(drop=True)  # indices match before concatenation
 df[actor_columns] = predictions_df  # add predictions to respective columns
 df.to_excel("inference/pofma_predictions.xlsx", index=False)
+
+file_path = 'inference/pofma_predictions.xlsx'
+df = pd.read_excel(file_path)
+
+actors = ['Actor: Media', 'Actor: Political Group or Figure', 'Actor: Civil Society Group or Figure',
+          'Actor: Social Media Platform', 'Actor: Internet Access Provider', 'Actor: Private Individual']
+
+percentages = (df[actors].mean() * 100).round(2)
+percentages_df = pd.DataFrame(percentages, columns=['Percentage of Notices'])
+
+print(percentages_df)
